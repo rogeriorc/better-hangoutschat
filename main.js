@@ -2,10 +2,10 @@
 'use strict';
 
 const path = require('path'),
-    { mkdir, tempdir, rm, sed, cat, touch } = require('shelljs');
+    { mkdir, tempdir, rm, cp, cat, touch, test } = require('shelljs');
 
 const mktemp = () => {
-    const file = path.join(tempdir(), 'ghc-' + new Date().getTime());
+    const file = path.join(tempdir(), 'ghc-' + Math.random().toString(16).slice(2).padStart(16, '0'));
 
     touch(file);
 
@@ -16,9 +16,10 @@ let PLUGINGEN = mktemp(),
     ESCAPEDPLUGIN = mktemp(),
     WRAPPEDPLUGIN = mktemp(),
     DEFAULTINIT = mktemp(),
-    MAINJSFILE = getMainJs();
+    MAINJSFILE = backupAndGetMainJs();
 
 function generateFiles(shape, color, out) {
+    out = path.join(__dirname, out);
     mkdir('-p', out);
 
     cat(path.join(__dirname, 'js', 'plugin.js'))
@@ -41,8 +42,53 @@ function generateFiles(shape, color, out) {
         .to(path.join(out, 'gmonkeyscript.js'));
 };
 
+function backupAndGetMainJs() {
+    let mainFile = getMainJs(),
+        appDir = path.dirname(mainFile),
+        pkg = require(path.join(appDir, 'package.json')),
+        backupFile = path.join(appDir, `main-v${pkg.version}.js`);
+
+    if (!test('-e', backupFile)) {
+        cp(mainFile, backupFile);
+    }
+
+    return backupFile;
+}
+
+
+
+
+
+function getAppPath() {
+    var targetDir;
+
+    switch (process.platform) {
+        case 'darwin':
+            targetDir = '/' + path.join('Applications', 'Chat.app', 'Contents');
+            break;
+        case 'win32':
+            targetDir = path.join(process.env.LOCALAPPDATA, 'Google', 'Hangouts Chat');
+            break;
+        default:
+            targetDir = path.join(os.homedir(), '.' + this.pkg.name);
+            break;
+    }
+
+    return targetDir;
+}
+
+
 function getMainJs() {
-    return path.join('C:', 'Users', 'roger', 'AppData', 'Local', 'Google', 'Hangouts Chat', 'resources', 'app', 'main.js');
+    const appDir = getAppPath();
+
+    switch (process.platform) {
+        case 'darwin':
+            return path.join(appDir, 'Resources', 'app', 'main.js');
+        case 'win32':
+            return path.join(appDir, 'resources', 'app', 'main.js');
+        default:
+            return '';
+    }
 }
 
 generateFiles(
@@ -63,4 +109,9 @@ generateFiles(
     "out/darktheme"
 );
 
-//rm('-rf', [DEFAULTINIT, PLUGINGEN, ESCAPEDPLUGIN, WRAPPEDPLUGIN]);
+rm('-rf', [DEFAULTINIT, PLUGINGEN, ESCAPEDPLUGIN, WRAPPEDPLUGIN]);
+
+cp(
+    path.join(__dirname, 'out', 'ghctheme', 'main.js'),
+    path.join('C:', 'Users', 'roger', 'AppData', 'Local', 'Google', 'Hangouts Chat', 'resources', 'app', 'main.js')
+);

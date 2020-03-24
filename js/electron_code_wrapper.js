@@ -1,4 +1,5 @@
-const electron = require('electron'),
+const path = require('path'),
+    electron = require('electron'),
     app = electron.app,
     BrowserWindow = electron.BrowserWindow,
     Menu = electron.Menu,
@@ -27,27 +28,14 @@ app.on('web-contents-created', (e, webContents) => {
         }
     });
 
-    if (mainWindow === null) {
-        mainWindow = BrowserWindow.fromWebContents(webContents);
 
-        mainWindow.on('minimize', function(event) {
-            event.preventDefault();
-            mainWindow.hide();
-        });
 
-        mainWindow.on('close', function(event) {
-            if (!isQuiting) {
-                event.preventDefault();
-                mainWindow.hide();
-            }
+});
 
-            return false;
-        });
-    }
-
-})
-
+/*
 app.on('ready', () => {
+    console.log(BrowserWindow.getAllWindows());
+
     contextMenu = Menu.buildFromTemplate([
         {
             label: 'Show App', click: function() {
@@ -62,6 +50,43 @@ app.on('ready', () => {
         }
     ]);
 
-    tray = new Tray('images/app-icon.ico');
+    tray = new Tray(path.join(__dirname, 'images', 'app-icon.ico'));
     tray.setContextMenu(contextMenu)
+});
+*/
+
+app.on('browser-window-created', (event, window) => {
+    console.log('browser-window-created');
+    let mainMenu = app.applicationMenu;
+
+    if (mainMenu) {
+        let menu = mainMenu.getMenuItemById('edit');
+        let closeMenu = menu.submenu.items.find((item) => item.role === 'close')
+
+        if (closeMenu) {
+            closeMenu.click = () => {
+                isQuiting = true;
+                app.quit();
+            };
+        }
+    }
+
+    if (mainWindow === null) {
+        mainWindow = window;
+    }
+
+    window.on('minimize', function(event) {
+        event.preventDefault();
+        window.hide();
+    });
+
+    window.on('close', function(event) {
+        if (!isQuiting) {
+            event.preventDefault();
+            window.hide();
+        }
+
+        return false;
+    });
+
 });
